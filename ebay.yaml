@@ -1,0 +1,26 @@
+name: ebay_api_config
+
+# Trading API Sandbox - https://www.x.com/developers/ebay/products/trading-api
+#api.sandbox.ebay.com:
+#    compatability: 719
+#    appid: ColinBau-c01c-4e3d-85cf-380674b047ac
+#    certid: 8ded4f5b-77f0-47a0-a588-250005fb67dc
+#    devid: 2e3c680e-b6cd-4f05-9966-a3ae1b418fda
+#    token: AgAAAA**AQAAAA**aAAAAA**R70OVA**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wFk4GhDJeDpw2dj6x9nY+seQ**4AcDAA**AAMAAA**Qk87u28OqXCNyB9khqI0TAVojlVNGHltnVzcWizMqPbFMt4BsEofmzKp/jN3j/b+ySqreX7SxkZRcA513yVQ7uXkSC3j8nKKxkxzvA4cksQRBB2yKE+MEeAevc8udVhhP++xT6Y/v2YDutdv/RQ7T/HOErwrjJnLhBqQXGZ/s54QfNgHo92FxDJlgpHl6fvXgJqjP3MIGXul4MObpA67Jt7FWiSYSNcbE+IhhuWZm+dFJn3oSBTtPtr0fRPw8Lcy18ei95qbulvMCqUO9Sws9qnaZqiY/mF0Ddni0hA0Yks7nCnRQeCMT1yxka1730DT63Akyb3rLJhOiuiINxBUHUdO2ah+KElkuuuouVe0jU3TfD3Awdz3Ow4nBsMz+X6DeZwJNXKOeTzLtKtdNRsjmFa/JFYcMEXhgbvvDGI+uTudLumVUCJZTKVygt2iwJIV7QooqmwFHuvPVCRRQrDP7x87HsvGaNErlRbv63GbGw061216GdkTaP1OBEIOaEaHfgHnS57/oWAeI8TD3xEoh52lzatTxTRwBOaGR7nRNk9s5QdRXMJK7ybm+2yC4MyqD6eFLkl58Qijc6xEuIJYs7zjrobOBnE1P8BaWrcXDQSfQrq1snzK+1o5878rnPLI6prjwWfWF5nhSXgQAZHF1/ZUP6jnzPkjl1uRGBbzX5JFJ2OjPC2etlfwTvi0osM3DvRXWfKBa/KsfhOAEHiInqjJKWtdO0EjXrx/izzPQkHdwor+wgF+bysEND4lacr5
+# Trading API - https://www.x.com/developers/ebay/products/trading-api
+api.ebay.com:
+    compatibility: 891
+    appid:     ColinBau-2f08-4390-bba5-9aacaedd47f6
+    certid:    b828e038-ddcb-490e-aa0d-4f9bf27acc59
+    devid:     2e3c680e-b6cd-4f05-9966-a3ae1b418fda
+    token: AgAAAA**AQAAAA**aAAAAA**gNoiVA**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wJkYWoDpmGqA2dj6x9nY+seQ**PXkCAA**AAMAAA**hzDKea9fTGWVfQz6a+ULxm8p20w2dRegRC1r3fy5UQjAbb/gQc7m76reGs4JHLA8/Dq6hdxVx6kNmP/78rG9ii4NXu3UIjyFPDA2G4Yg+BMZ7BfDdCVgBPtigPhrrf6GJxTQF/yP0nWbFW0hDN6ZwFURMEcFXazayEUbqNDD9V0zj35Z1X7WE3xV8tnph37SDZDhplGC1ha3MjcDRZqZURhz74TxmH1nugJ9pSsjY7GsDvmVgFk0BP/AFgA8jOXiA6avHSAzWstY9AK/Pxmcj5fO3Df+w5WYrjnNMPZcwPMyFeb+oAxABG8KkYmKbWmh/D57JVHn0G6J2tEysCQMUXUZa8VxbP9noKjmIADhmYh6pjx7PzAtjB0feAdFOb9BGmVeczGgYJrMaBhujrwPB9beaC6d1EuUnw4dON/RJqHWRq9ecQkAMsVB5+eki+/HS0LA4ZVA01FaMW6QlgNRefwj5fAJbv20mggfYx5dA+e8STAmk05ThzUktiaRzHxZEtIiVsf3xqZkSFfCZVpFskdWsBb+ifLYpjEAf+KG+56zijYC50HOP+oTcVqfUcQ9EaBZyiS6+VrYR2KVkGiVGNWyOdY56Y7Q7yJfhMxMi2YAxEFyhPZt6qVg02Ka6ubV0Mcm6Xn1jq02XUzkq3+Q0QMYV2D37MGYxaq0qVCfvp3l6GuY+hZ1S7z9BPu2uXDC8h0t+JurlSveX+/2cj+2loCX+nneCgikupnwrmZCFbqV4jmX36qrIDbE7KU2d7TE
+
+# Finding API - https://www.x.com/developers/ebay/products/finding-api
+svcs.ebay.com:
+    appid: ColinBau-2f08-4390-bba5-9aacaedd47f6
+    version: 1.0.0
+
+# Shopping API - https://www.x.com/developers/ebay/products/shopping-api
+open.api.ebay.com:
+    appid: ColinBau-2f08-4390-bba5-9aacaedd47f6
+    version: 671
