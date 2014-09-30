@@ -34,7 +34,7 @@ def disconnect_db():
 
 def connect_api():
     global trading_api,finding_api,shopping_api
-    trading_api=trading(config_file='ebay.yaml',siteid=77)
+    trading_api=trading(config_file='ebay.yaml',siteid=77,token='AgAAAA**AQAAAA**aAAAAA**gNoiVA**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wJkYWoDpmGqA2dj6x9nY+seQ**PXkCAA**AAMAAA**hzDKea9fTGWVfQz6a+ULxm8p20w2dRegRC1r3fy5UQjAbb/gQc7m76reGs4JHLA8/Dq6hdxVx6kNmP/78rG9ii4NXu3UIjyFPDA2G4Yg+BMZ7BfDdCVgBPtigPhrrf6GJxTQF/yP0nWbFW0hDN6ZwFURMEcFXazayEUbqNDD9V0zj35Z1X7WE3xV8tnph37SDZDhplGC1ha3MjcDRZqZURhz74TxmH1nugJ9pSsjY7GsDvmVgFk0BP/AFgA8jOXiA6avHSAzWstY9AK/Pxmcj5fO3Df+w5WYrjnNMPZcwPMyFeb+oAxABG8KkYmKbWmh/D57JVHn0G6J2tEysCQMUXUZa8VxbP9noKjmIADhmYh6pjx7PzAtjB0feAdFOb9BGmVeczGgYJrMaBhujrwPB9beaC6d1EuUnw4dON/RJqHWRq9ecQkAMsVB5+eki+/HS0LA4ZVA01FaMW6QlgNRefwj5fAJbv20mggfYx5dA+e8STAmk05ThzUktiaRzHxZEtIiVsf3xqZkSFfCZVpFskdWsBb+ifLYpjEAf+KG+56zijYC50HOP+oTcVqfUcQ9EaBZyiS6+VrYR2KVkGiVGNWyOdY56Y7Q7yJfhMxMi2YAxEFyhPZt6qVg02Ka6ubV0Mcm6Xn1jq02XUzkq3+Q0QMYV2D37MGYxaq0qVCfvp3l6GuY+hZ1S7z9BPu2uXDC8h0t+JurlSveX+/2cj+2loCX+nneCgikupnwrmZCFbqV4jmX36qrIDbE7KU2d7TE')
     finding_api=finding(config_file='ebay.yaml',siteid='EBAY-DE')
     shopping_api=shopping(config_file='ebay.yaml',siteid=77)
     
@@ -248,7 +248,7 @@ def get_all_items_old(category,aspect_filter,query_type):
         
 
 def get_all_items(category,aspect_filter,query_type='findItemsByCategory',stop_if_known=False):
-    global finding_api,pickle_files,db_cursor,api_error
+    global finding_api,pickle_files,db_cursor,api_error,log_file
     try:
         api_error=False
         result_data=[]
@@ -261,17 +261,25 @@ def get_all_items(category,aspect_filter,query_type='findItemsByCategory',stop_i
         result=response.dict()
         current_page=int(result['paginationOutput']['pageNumber'])
         num_pages=int(result['paginationOutput']['totalPages'])
-        print 'get_all_items: pages='+result['paginationOutput']['totalPages']
+        f=open(log_file,'a')
+        f.write('get_all_items: pages='+str(result['paginationOutput']['totalPages']))
+        f.write('\n')
+        f.close()
         #while(current_page<=1):
         object_known=False
         while(current_page<=num_pages and not object_known):
-            print result['paginationOutput']
+            f=open(log_file,'a')
+            f.write(str(result['paginationOutput']))
+            f.write('\n')
+            f.close()
             for item in result['searchResult']['item']:
                 if(stop_if_known):
                     query=db_cursor.mogrify('SELECT * FROM itemData where itemId=%s;',(int(item['itemId']),))
                     db_cursor.execute(query)
                     if(db_cursor.rowcount>0):
-                        print 'found known object'
+                        f=open(log_file,'a')
+                        f.write('found known object\n')
+                        f.close()
                         object_known=True
                         break
                 result_data.append(item['itemId'])
@@ -319,11 +327,14 @@ def get_active_items_from_db(category):
         else:
             if(itemstate[0] == 'Active'):
                 active_items.append((item[0],itemstate[1]))
-    print 'nr of missing states: '+str(missing_states)
+    f=open(log_file,'a')
+    f.write('nr of missing states: '+str(missing_states))
+    f.write('\n')
+    f.close()
     return active_items
 
 def add_items(items,category):
-    global db_connection,db_cursor
+    global db_connection,db_cursor,log_file
     new_data=[]
     try:
         for item in items:
@@ -335,7 +346,10 @@ def add_items(items,category):
                 #db_connection.commit()
                 new_data.append(item)
     except psycopg2.Error as e:
-        print e
+        f=open(log_file,'a')
+        f.write(str(e))
+        f.write('\n')
+        f.close()
     db_connection.commit()
     return new_data
         #catch     
@@ -448,7 +462,7 @@ def add_data(items,timestamp):
     
 
 def add_item_attributes(item,category,attributes):
-    global category_attributes,aspect_filter,db_connection,db_cursor
+    global category_attributes,aspect_filter,db_connection,db_cursor,log_file
     item_id=int(item['ItemID'])
     attribute_names=[attribute['aspectName'] for attribute in attributes]
     attribute_values=[]
@@ -487,7 +501,10 @@ def add_item_attributes(item,category,attributes):
             #print query
             db_cursor.execute(query)
     except psycopg2.Error as e:
-        print e  
+        f=open(log_file,'a')
+        f.write(str(e))
+        f.write('\n')
+        f.close()  
 
 def get_item_states(category):
     a=2
@@ -519,52 +536,109 @@ def load_pickle_items(category):
     db_connection.commit()
 
 
-def get_category_items(category,aspect_filter):
-    global finding_api
-        
+      
 
 def get_multiple_items(item_ids,category,filename=None):
-    global shopping_api,category_attributes,api_error
+    global shopping_api,api_error,log_file
     
-    
-    try:
-        slice_begin=0
-        slice_end=20
-        N=len(item_ids)
-        api_error=False
-        while(slice_begin<N):
-            print slice_begin
-            item_slice=item_ids[slice_begin:slice_end]
-            query=dict()
-            query['sortOrder']='StartTimeNewest'
-            query['itemID']=item_slice
-            query['IncludeSelector']='Details,ItemSpecifics,ShippingCosts'
+    slice_begin=0
+    slice_end=20
+    N=len(item_ids)
+    api_error=False
+    while(slice_begin<N):
+        f=open(log_file,'a')
+        f.write(str(slice_begin))
+        f.write('\n')
+        f.close()
+        item_slice=item_ids[slice_begin:slice_end]
+        query=dict()
+        query['sortOrder']='StartTimeNewest'
+        query['itemID']=item_slice
+        query['IncludeSelector']='Details,ItemSpecifics,ShippingCosts'
+        slice_begin=slice_end
+        slice_end+=20
+        try:
             response=shopping_api.execute('GetMultipleItems',query)
-            result=response.dict()
-            #print result
-            slice_begin=slice_end
-            slice_end+=20
-            data=result['Item']
-            if(type(data) is dict):
-                data=[data]
-            add_attributes(data,category)
-            #print 'adding data'
-            add_data(data,result['Timestamp'])
-            #print 'adding state'
-            add_state(data,result['Timestamp'])
-            
-            if(filename is not None):
-                output = open(filename+'_'+time.strftime("%d_%m_%Y_%H_%M_%S")+str(slice_begin)+'.pkl', 'w')
-                pickle.dump({'timestamp':result['Timestamp'],'items':result['Item']},output,-1)
-                output.close()
+        except (ConnectionError,Timeout) as e:
+            f=open(log_file,'a')
+            f.write(str(e))
+            f.write('\n')
+            f.close()
+            api_error=True
+        except(EbayConnectionError) as e:
+            get_invalid_items(item_slice)
+            continue
+        result=response.dict()
+        #print result
+        
+        data=result['Item']
+        if(type(data) is dict):
+            data=[data]
+        add_attributes(data,category)
+        #print 'adding data'
+        add_data(data,result['Timestamp'])
+        #print 'adding state'
+        add_state(data,result['Timestamp'])
+        
+        if(filename is not None):
+            output = open(filename+'_'+time.strftime("%d_%m_%Y_%H_%M_%S")+str(slice_begin)+'.pkl', 'w')
+            pickle.dump({'timestamp':result['Timestamp'],'items':result['Item']},output,-1)
+            output.close()
                 
+    
+        #print(e.response.dict())
+
+def remove_invalid_item(item_id):
+    global db_connection,db_cursor
+    
+    query=db_cursor.mogrify('delete FROM itemAttributes where itemId=%s;',(item_id,))
+    db_cursor.execute(query)
+    query=db_cursor.mogrify('delete FROM itemData where itemId=%s;',(item_id,))
+    db_cursor.execute(query)
+    query=db_cursor.mogrify('delete FROM itemIds where itemId=%s;',(item_id,))
+    db_cursor.execute(query)
+    query=db_cursor.mogrify('delete FROM itemState where itemId=%s;',(item_id,))
+    db_cursor.execute(query)
+    db_connection.commit()
+
+def get_item_history(item):
+    global trading_api
+    item=321516040735
+    query=dict()
+    #query['itemID']=item
+    response=None
+    try:
+        response=trading_api.execute('GetAllBidders',query)
     except (ConnectionError,Timeout) as e:
         print(e)
-        api_error=True
     except(EbayConnectionError) as e:
-        print e
-        print query
-        #print(e.response.dict())
+        a=2
+    print(response)
+    
+    
+    
+
+def get_invalid_items(items):
+    global finding_api
+    
+    query=dict()
+    for item in items:
+        query['itemID']=item
+        try:
+            shopping_api.execute('GetSingleItem',query)
+        except (ConnectionError,Timeout) as e:
+            f=open(log_file,'a')
+            f.write(str(e))
+            f.write('\n')
+            f.close()
+        except(EbayConnectionError) as e:
+            #print e.message
+            if 'nicht vorhandene Artikelnummer' in e.message:
+                f=open(log_file,'a')
+                f.write('removing invalid item '+str(item))
+                f.write('\n')
+                f.close()
+                remove_invalid_item(item)
 
 def add_attributes(items,category):
     global db_connection
@@ -668,21 +742,42 @@ handys=15032
 handys_ohne_vertrag=9355
 ebay_calls=0
 
+error="u'GetMultipleItems: Class: RequestError, Severity: Error, Code: 10.12, Ung\xfcltige Artikelnummer.Ung\xfcltige bzw. nicht vorhandene Artikelnummer.'"
+
+invalid_smartphones=[321527057063L, 261593630199L, 111460989198L, 331323569421L, 251649899348L, 251649897329L, 161426101663L, 261597891063L, 281443288620L, 361054528129L, 151414690690L, 161424692577L, 291241506297L, 171464449456L, 191336639227L, 231337364295L, 321527318914L, 111466612226L, 171465894456L, 331323670525L]
+
 
 valid_attributes={
     tablets:['Marke','Produktlinie',u'Speicherkapazit\xe4t','Betriebssystem','Farbe'],
     apple_notebooks:['Herstellergarantie', 'Betriebssystem','Marke',u'Bildschirmgr\xf6\xdfe', 'Prozessortyp', 'Arbeitsspeicher', u'Festplattenkapazit\xe4t', 'Prozessorgeschwindigkeit', 'Produktfamilie', 'Erscheinungsjahr','Herstellernummer'],
-    handys_ohne_vertrag:['Marke','Modell',u'Speicherkapazit\xe4t','Farbe','Verbindung','Produktpakete','Vertragslaufzeit']
+    #handys_ohne_vertrag:['Marke','Modell',u'Speicherkapazit\xe4t','Farbe','Verbindung','Produktpakete','Vertragslaufzeit']
+    handys_ohne_vertrag:['Brand','Model','Memory','Color','Connection','Produktpakete','Vertragslaufzeit']
 }
 
 
+def get_items_by_seller(category,seller):
+    global finding_api
+    
+    query=dict()
+    item_filter=[{'name':'SoldItemsOnly','value':'true'}]
+    query['ItemFilter']=item_filter
+    #query
+    query['categoryId']=category
+    #query['categoryId']=category
+    
+    response=finding_api.execute('findCompletedItems',query)
+    print response.dict()
+
 # run once in a while...
 def get_missing_data(category):
-    global api_error
+    global api_error,log_file
     
     all_items=get_all_items_from_db(category)
     unknown_items=get_incomplete_data(all_items)
-    print 'there are '+str(len(unknown_items))+' missing values'
+    f=open(log_file,'a')
+    f.write('there are '+str(len(unknown_items))+' missing values')
+    f.write('\n')
+    f.close()
     api_error=True
     while(api_error):
         get_multiple_items(unknown_items,category)
@@ -783,7 +878,7 @@ def load_items():
     a=2
 
 def get_new_items(category,aspect_filter,stop_if_known=True,id_file=None,data_file=None):
-    global api_error
+    global api_error,log_file
     if(id_file is not None):
         item_ids=get_items_pickle(id_file)
     else:
@@ -791,26 +886,40 @@ def get_new_items(category,aspect_filter,stop_if_known=True,id_file=None,data_fi
         while(api_error):
             item_ids=get_all_items(category,aspect_filter,query_type='findItemsByCategory',stop_if_known=stop_if_known)
     
-    print 'available items: '+str(len(item_ids))
+    f=open(log_file,'a')
+    f.write('available items: '+str(len(item_ids)))
+    f.write('\n')
+    f.close()
     unknown_items=get_incomplete_data(item_ids)
     add_items(unknown_items,category)
-    print 'new items: '+str(len(unknown_items))
+    f=open(log_file,'a')
+    f.write('new items: '+str(len(unknown_items)))
+    f.write('\n')
+    f.close()
     api_error=True
     while(api_error):
         get_multiple_items(unknown_items,category)
 
-def update_states(category,time_offset=20):
-    print 'update states'
+def update_states(category,time_offset=10):
+    global log_file
+    
+    f=open(log_file,'a')
+    f.write('update states')
+    f.write('\n')
+    f.close()
     active_items=get_active_items_from_db(category)
-    #print active_items
     today=datetime.datetime.now()
     outdated_items=[]
     for item in active_items:
         time_delta=today-item[1]
         if(time_delta.days>0 or (time_delta.seconds/3600.)>time_offset):
             outdated_items.append(item[0])
-    print 'active items: '+str(len(active_items))
-    print 'outdated items: '+str(len(outdated_items))
+    f=open(log_file,'a')
+    f.write('active items: '+str(len(active_items)))
+    f.write('\n')
+    f.write('outdated items: '+str(len(outdated_items)))
+    f.write('\n')
+    f.close()
     get_multiple_items(outdated_items,category)
     
 def get_product_details(category_id):
@@ -820,88 +929,58 @@ def get_product_details(category_id):
     print(response.dict())    
 
 if __name__ == '__main__':
-    #reload(sys)
-    #sys.setdefaultencoding('UTF-8')
+    
+    cat=int(sys.argv[1])
+    #cat=0
     trading_api=None
     finding_api=None
     shopping_api=None
     db_connection=None
     db_cursor=None
-    
-    
+    log_file='logs/log_'+str(cat)+'_'+time.strftime("%d_%m_%Y_%H_%M_%S")+'.csv'
     connect_db()
     
     connect_api()
+    #get_items_by_seller(handys_ohne_vertrag,'goyellow99')
     
-    
+    #get_item_history(0)
+    #disconnect_db()
+    #exit(1)
     category_aspect_dict={}
     #for category in [apple_notebooks]:
-    for category in [apple_notebooks,tablets,handys_ohne_vertrag]:
-        print category
-        category_attributes=valid_attributes[category]
-        api_error=True
-        while(api_error):
-            update_states(category)
+    categories= [apple_notebooks,tablets,handys_ohne_vertrag]
+    category=categories[cat]
+    category_attributes=valid_attributes[category]
+    api_error=True
+    while(api_error):
+        update_states(category)
+    
+    if(category==apple_notebooks):
+        aspect_filter={}
+        get_missing_data(apple_notebooks)
+        get_new_items(category,aspect_filter)
         
-        if(category==apple_notebooks):
-            aspect_filter={}
+    elif(category==handys_ohne_vertrag):
+        category_aspects={'Modell':['iPhone 6 Plus','iPhone 6','iPhone 5c','iPhone 5s','iPhone 5','Samsung Galaxy S 4','Samsung Galaxy S 5']}
+        for m in category_aspects['Modell']:
+            aspects={'Modell':m}
+            aspect_filter=get_aspect_filter(aspects)
+            f=open(log_file,'a')
+            f.write(str(aspect_filter))
+            f.write('\n')
+            f.close()
             get_missing_data(apple_notebooks)
             get_new_items(category,aspect_filter)
-            
-        elif(category==handys_ohne_vertrag):
-            category_aspects={'Modell':['iPhone 6 Plus','iPhone 6','iPhone 5c','iPhone 5s','iPhone 5','Samsung Galaxy S 4','Samsung Galaxy S 5']}
-            for m in category_aspects['Modell']:
-                aspects={'Modell':m}
-                aspect_filter=get_aspect_filter(aspects)
-                print aspect_filter
-                get_missing_data(apple_notebooks)
-                get_new_items(category,aspect_filter)
-            
-        elif(category==tablets):
-            category_aspects={'Produktlinie':['Galaxy Tab','iPad 1. Generation','iPad 2','iPad 3. Generation','iPad 4. Generation','iPad Air','iPad mini','iPad mini mit Retina Display']}
-            #category_aspects={'Produktlinie':['iPad 2','iPad 3. Generation','iPad 4. Generation','iPad Air','iPad mini']}
-            for m in category_aspects['Produktlinie']:
-                aspects={'Produktlinie':m}
-                aspect_filter=get_aspect_filter(aspects)
-                print aspect_filter
-                get_missing_data(apple_notebooks)
-                get_new_items(category,aspect_filter) 
         
+    elif(category==tablets):
+        category_aspects={'Produktlinie':['Galaxy Tab','iPad 1. Generation','iPad 2','iPad 3. Generation','iPad 4. Generation','iPad Air','iPad mini','iPad mini mit Retina Display']}
+        #category_aspects={'Produktlinie':['iPad 2','iPad 3. Generation','iPad 4. Generation','iPad Air','iPad mini']}
+        for m in category_aspects['Produktlinie']:
+            aspects={'Produktlinie':m}
+            aspect_filter=get_aspect_filter(aspects)
+            print aspect_filter
+            get_missing_data(apple_notebooks)
+            get_new_items(category,aspect_filter) 
+    
     disconnect_db()
-    exit(1)
-    #new_items=add_items(item_ids,category)
-    item_ids=get_all_items(category,aspect_filter)
-    new_items=item_ids
-    
-    get_multiple_items(new_items,category)
-    #items_detailed=get_multiple_items(new_items,category)
-    #print items_detailed
-    
-    #db_connection.commit()
-    #print len(item_ids)
-    #load_pickle_items(category)
-    
-    #add_attribute_id_to_db(category,category_attributes)
-    disconnect_db()
-    exit(1)
-    
-    
-    
-    load_pickle_items(apple_notebooks)
-    #add_item_to_db(0)
-    disconnect_db()
-    exit(0)
-    
-    pickle_files=0
-    recursive_find(apple_notebooks,list(),0)
-    #get_items_by_category(apple_notebooks,category_aspects,category_order)
-    #get_items_by_category()
-    #get_item_complete_description(251638689051)
-    #get_product_details(apple_notebooks)
-    #pkl_file = open('items_by_category.pkl', 'r')
-    #data=pickle.load(pkl_file)
-    #pkl_file.close()
-    #print data['paginationOutput']
-    #print data['searchResult']['item'][0]
-
     

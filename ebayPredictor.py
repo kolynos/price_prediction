@@ -5,10 +5,11 @@ Created on 18.09.2014
 '''
 import psycopg2 as pg
 import pandas.io.sql as psql
-import numpy as np                                                                #    required
-import pandas as pd  
-import re                                                          #    required
-#from pandas    import    DataFrame,    Series    #    useful
+import numpy as np
+import pandas as pd
+import re
+import sys
+from time import sleep
 
 def connect_db():
     global db_connection
@@ -100,6 +101,12 @@ def get_item_states(category):
     states.to_csv('states.csv',encoding='utf-8')
 
 
+def write_test():
+    for i in range(10):
+        print i
+        sleep(1)
+    
+
 def exception_test():
     global error
     error=False
@@ -113,13 +120,13 @@ def exception_test():
 if __name__ == '__main__':
     error=None
     db_connection=None
-    exception_test()
-    print error
-    exit(1)
     connect_db()
-    #dump_tables()
-    #get_item_states(111422)
-    remove_backslashes()
+    func = globals().get(sys.argv[1])
+    #if func is None:
+    #    _usage_and_exit()
+
+    func(*sys.argv[2:])
+    
     disconnect_db()
     
     pass
