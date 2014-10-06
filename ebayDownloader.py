@@ -447,8 +447,12 @@ def add_data_details(item,timestamp):
     db_cursor.execute(query)
     if(db_cursor.rowcount==0):
         attribute_string,attribute_indices,attribute_values=generate_query_strings(attribute_ids,item_data_names,item)
+        if(attribute_values[13] is not None):
+            if(len(attribute_values[13])>5000):
+                attribute_values[13]=attribute_values[13][0:5000]
         query=db_cursor.mogrify('Insert into itemDataDetails'+attribute_string+' VALUES '+attribute_indices,tuple(attribute_values))
         #print query
+        #print len(attribute_values[13][0:20000])
         db_cursor.execute(query)
     db_connection.commit()
 
@@ -565,21 +569,29 @@ def load_pickle_items(category):
 
 
 def get_item_details(filename):
-    global trading_api,api_error,db_cursor
+    global trading_api,api_error,db_cursor,log_file
     
     item_ids=pd.read_csv(filename)
     
     #item_ids=item_ids[0:10]
     #[291241712806,301305736929]
     
+    max_item_size=40
+    current_item=0
     api_error=False
     for (index,item) in item_ids.iterrows():
+        api_error=False
         itemID=item['x']
         query=db_cursor.mogrify('SELECT * FROM itemDataDetails where itemId=%s;',(itemID,))
-        
-        print query
+        if(current_item>max_item_size):
+            return
+        #print query
         db_cursor.execute(query)
         if(db_cursor.rowcount==0):
+            f=open(log_file,'a')
+            f.write(str(current_item)+' '+str(itemID)+' '+time.strftime("%H_%M_%S"))
+            #f.write('\n')
+            f.close()
             query=dict()
             query['DetailLevel']='ItemReturnDescription'
             query['itemID']=itemID
@@ -587,16 +599,39 @@ def get_item_details(filename):
                 response=trading_api.execute('GetItem',query)
             except (ConnectionError,Timeout) as e:
                 f=open(log_file,'a')
-                f.write(str(e))
+                f.write(e['response'])
                 f.write('\n')
                 f.close()
                 api_error=True
             except(EbayConnectionError) as e:
+                response=e
                 #get_invalid_items(item_slice)
+                #print response
+                #print response[0]
+                #print type(response[0])
+                f=open(log_file,'a')
+                f.write(' '+str(e[0].encode('utf8')))
+                f.close()
+                api_error=True
+            except(EbayConnectionError) as e:
+                print 'here2'
+                #get_invalid_items(item_slice)
+                f=open(log_file,'a')
+                f.write(' '+str(e[0].encode('utf8')))
+                f.write('\n')
+                f.close()
+                api_error=True
+            if(api_error):
+                f=open(log_file,'a')
+                f.write('\n')
                 continue
             result=response.dict()
+            f=open(log_file,'a')
+            f.write(' ok')
+            f.write('\n')
             #print result
             add_data_details(result['Item'],result['Timestamp'])
+            current_item=current_item+1
     
 
 def get_multiple_items(item_ids,category,filename=None):
@@ -1006,7 +1041,9 @@ if __name__ == '__main__':
     if(cat==4):
         get_item_details('items.csv')
         disconnect_db()
-        exit(1)
+        if(api_error):
+            sys.exit(1)
+        sys.exit()
     category_aspect_dict={}
     #for category in [apple_notebooks]:
     categories= [apple_notebooks,tablets,handys_ohne_vertrag]
