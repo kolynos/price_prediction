@@ -12,6 +12,11 @@ from ebaysdk.exception import ConnectionError as EbayConnectionError
 from requests.exceptions import ConnectionError,Timeout
 from copy import copy,deepcopy
 from itertools import islice
+#import psycopg2 as pg
+import pandas.io.sql as psql
+import numpy as np
+import pandas as pd
+
 #import os
 import os.path
 import pickle
@@ -53,12 +58,13 @@ def get_categories():
 
 def get_item_complete_description(item):
     global trading_api
-    trading_api.execute('GetItem', {'ItemID':item})
+    
+    query={}
+    query['DetailLevel']='ItemReturnDescription'
+    query['ItemID']=item
+    trading_api.execute('GetItem', query)
     print trading_api.response_dict()
     
-def get_item_descriptions():
-    global shopping_api
-    a=2
 
 def get_attribute_type_id_from_db(category,attribute_names):
     global db_connection,db_cursor
@@ -424,9 +430,30 @@ def generate_query_strings(query_ids,item_names,item):
     attribute_string='('+','.join(query_ids)+')'
     attribute_indices='('+','.join(['%s']*len(query_ids))+')'
     return attribute_string,attribute_indices,attribute_values
+
+def add_data_details(item,timestamp):
+    global db_cursor,db_connection
+    #attribute_ids
+    attribute_ids=['itemID','return_policy','seller_storeowner','seller_business','pictures','start_price','has_reserve','reserve_met','buyitnow_price',
+                   'buyer_feedback','buyer_score','shipping_service','insurance','item_description','time_timestamp']
+
+    item_data_names=['ItemID',['ReturnPolicy',['ReturnsAcceptedOption','NA']],['Seller','SellerInfo',['StoreOwner','NA']],['Seller','SellerInfo',['SellerBusinessType','NA']],
+                     ['PictureDetails',['PictureURL','NA']],['StartPrice',['value',-1]],['ListingDetails',['HasReservePrice','NA']],['SellingStatus',['ReserveMet','NA']],
+                     ['ListingDetails','ConvertedBuyItNowPrice',['value',-1]],['SellingStatus','HighBidder',['PositiveFeedbackPercent',-1]],['SellingStatus','HighBidder',['FeedbackScore',-1]],
+                     ['ShippingDetails','ShippingServiceOptions',['ShippingService','NA']],['ShippingDetails','InsuranceDetails',['InsuranceOption','NA']],
+                     'Description',['InsuranceDetails',['timestamp',timestamp]]]
     
+    query=db_cursor.mogrify('SELECT * FROM itemDataDetails where itemId=%s;',(item['ItemID'],))
+    db_cursor.execute(query)
+    if(db_cursor.rowcount==0):
+        attribute_string,attribute_indices,attribute_values=generate_query_strings(attribute_ids,item_data_names,item)
+        query=db_cursor.mogrify('Insert into itemDataDetails'+attribute_string+' VALUES '+attribute_indices,tuple(attribute_values))
+        #print query
+        db_cursor.execute(query)
+    db_connection.commit()
+
 def add_data(items,timestamp):
-    global db_cursor
+    global db_cursor,db_connection
     attribute_ids=['itemID','title','condition_id','condition_name',
                    'listing_type','listing_bestoffer','listing_buyitnow','listing_buyitnow_price','listing_current_price',
                    'shipping_cost','shipping_type',
@@ -536,7 +563,41 @@ def load_pickle_items(category):
     db_connection.commit()
 
 
-      
+
+def get_item_details(filename):
+    global trading_api,api_error,db_cursor
+    
+    item_ids=pd.read_csv(filename)
+    
+    #item_ids=item_ids[0:10]
+    #[291241712806,301305736929]
+    
+    api_error=False
+    for (index,item) in item_ids.iterrows():
+        itemID=item['x']
+        query=db_cursor.mogrify('SELECT * FROM itemDataDetails where itemId=%s;',(itemID,))
+        
+        print query
+        db_cursor.execute(query)
+        if(db_cursor.rowcount==0):
+            query=dict()
+            query['DetailLevel']='ItemReturnDescription'
+            query['itemID']=itemID
+            try:
+                response=trading_api.execute('GetItem',query)
+            except (ConnectionError,Timeout) as e:
+                f=open(log_file,'a')
+                f.write(str(e))
+                f.write('\n')
+                f.close()
+                api_error=True
+            except(EbayConnectionError) as e:
+                #get_invalid_items(item_slice)
+                continue
+            result=response.dict()
+            #print result
+            add_data_details(result['Item'],result['Timestamp'])
+    
 
 def get_multiple_items(item_ids,category,filename=None):
     global shopping_api,api_error,log_file
@@ -921,7 +982,7 @@ def update_states(category,time_offset=10):
     f.write('\n')
     f.close()
     get_multiple_items(outdated_items,category)
-    
+
 def get_product_details(category_id):
     global shopping_api
     
@@ -941,11 +1002,11 @@ if __name__ == '__main__':
     connect_db()
     
     connect_api()
-    #get_items_by_seller(handys_ohne_vertrag,'goyellow99')
     
-    #get_item_history(0)
-    #disconnect_db()
-    #exit(1)
+    if(cat==4):
+        get_item_details('items.csv')
+        disconnect_db()
+        exit(1)
     category_aspect_dict={}
     #for category in [apple_notebooks]:
     categories= [apple_notebooks,tablets,handys_ohne_vertrag]
@@ -978,7 +1039,10 @@ if __name__ == '__main__':
         for m in category_aspects['Produktlinie']:
             aspects={'Produktlinie':m}
             aspect_filter=get_aspect_filter(aspects)
-            print aspect_filter
+            f=open(log_file,'a')
+            f.write(str(aspect_filter))
+            f.write('\n')
+            f.close()
             get_missing_data(apple_notebooks)
             get_new_items(category,aspect_filter) 
     
