@@ -65,6 +65,9 @@ def dump_tables():
     query="SELECT * FROM itemData"
     item_data=psql.read_sql(query, db_connection)
     item_data.to_csv('item_data.csv',encoding='utf-8',index=False,sep='|')
+    query="SELECT * FROM itemDataDetails"
+    item_data=psql.read_sql(query, db_connection)
+    item_data.to_csv('item_data_details.csv',encoding='utf-8',index=False,sep='|')
     
 def remove_backslashes():
     query="SELECT * FROM itemData"
