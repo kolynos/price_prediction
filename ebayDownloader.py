@@ -27,7 +27,7 @@ import sys
 
 def connect_db():
     global db_connection,db_cursor
-    db_connection = psycopg2.connect("dbname=ebayPredictor user=postgres password=quejodes")
+    db_connection = psycopg2.connect("dbname=ebaypredictor user=postgres password=quejodes")
     db_cursor = db_connection.cursor()
 
 def disconnect_db():
