@@ -431,7 +431,7 @@ def generate_query_strings(query_ids,item_names,item):
     attribute_indices='('+','.join(['%s']*len(query_ids))+')'
     return attribute_string,attribute_indices,attribute_values
 
-def add_data_details(item,timestamp):
+def add_data_details(item,timestamp,update=False):
     global db_cursor,db_connection
     #attribute_ids
     attribute_ids=['itemID','return_policy','seller_storeowner','seller_business','pictures','start_price','has_reserve','reserve_met','buyitnow_price',
@@ -445,12 +445,16 @@ def add_data_details(item,timestamp):
     
     query=db_cursor.mogrify('SELECT * FROM itemDataDetails where itemId=%s;',(item['ItemID'],))
     db_cursor.execute(query)
-    if(db_cursor.rowcount==0):
+    if(db_cursor.rowcount==0|update):
         attribute_string,attribute_indices,attribute_values=generate_query_strings(attribute_ids,item_data_names,item)
         if(attribute_values[13] is not None):
-            if(len(attribute_values[13])>5000):
-                attribute_values[13]=attribute_values[13][0:5000]
-        query=db_cursor.mogrify('Insert into itemDataDetails'+attribute_string+' VALUES '+attribute_indices,tuple(attribute_values))
+            attribute_values[13]=attribute_values[13].replace('\n','')
+            if(len(attribute_values[13])>25000):
+                attribute_values[13]=attribute_values[13][0:25000]
+        if(update):
+            query=db_cursor.mogrify('update itemDataDetails set item_description=%s where itemid=%s',tuple([attribute_values[i] for i in[13,0]]))
+        else:
+            query=db_cursor.mogrify('Insert into itemDataDetails'+attribute_string+' VALUES '+attribute_indices,tuple(attribute_values))
         #print query
         #print len(attribute_values[13][0:20000])
         db_cursor.execute(query)
@@ -568,7 +572,7 @@ def load_pickle_items(category):
 
 
 
-def get_item_details(filename):
+def get_item_details(filename,update=False):
     global trading_api,api_error,db_cursor,log_file
     
     item_ids=pd.read_csv(filename)
@@ -576,7 +580,7 @@ def get_item_details(filename):
     #item_ids=item_ids[0:10]
     #[291241712806,301305736929]
     
-    max_item_size=40
+    max_item_size=2000
     current_item=0
     api_error=False
     for (index,item) in item_ids.iterrows():
@@ -587,7 +591,7 @@ def get_item_details(filename):
             return
         #print query
         db_cursor.execute(query)
-        if(db_cursor.rowcount==0):
+        if(db_cursor.rowcount==0 or update):
             f=open(log_file,'a')
             f.write(str(current_item)+' '+str(itemID)+' '+time.strftime("%H_%M_%S"))
             #f.write('\n')
@@ -630,7 +634,7 @@ def get_item_details(filename):
             f.write(' ok')
             f.write('\n')
             #print result
-            add_data_details(result['Item'],result['Timestamp'])
+            add_data_details(result['Item'],result['Timestamp'],update)
             current_item=current_item+1
     
 
@@ -996,7 +1000,7 @@ def get_new_items(category,aspect_filter,stop_if_known=True,id_file=None,data_fi
     while(api_error):
         get_multiple_items(unknown_items,category)
 
-def update_states(category,time_offset=10):
+def update_states(category,time_offset=2):
     global log_file
     
     f=open(log_file,'a')
@@ -1027,7 +1031,7 @@ def get_product_details(category_id):
 if __name__ == '__main__':
     
     cat=int(sys.argv[1])
-    #cat=0
+    #cat=5
     trading_api=None
     finding_api=None
     shopping_api=None
@@ -1040,6 +1044,12 @@ if __name__ == '__main__':
     
     if(cat==4):
         get_item_details('items.csv')
+        disconnect_db()
+        if(api_error):
+            sys.exit(1)
+        sys.exit()
+    if(cat==5):
+        get_item_details('item_details.csv',update=True)
         disconnect_db()
         if(api_error):
             sys.exit(1)
